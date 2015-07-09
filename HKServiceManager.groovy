@@ -226,7 +226,16 @@ def nextTrack(childScript) {
 
 def playTrack(track) {
     log.debug "Executing 'playTrack'"
-    parent.playTrack(this, track)
+    def playlist = mediaList(atomicState.sessionID)["MediaList"]
+    for ( int i = 0; i < playlist.size(); i++ ) {
+        if (playlist[i]["Title"] == track) {
+            atomicState.currentSong = ["Title":playlist[i+1]["Title"], "ID":playlist[i+1]["PersistentID"]]
+            playHubMedia(atomicState.sessionID, atomicState.currentSong["ID"])
+            def event = ["trackDescription":atomicState.currentSong["Title"]]
+            childScript.generateEvent(event)
+            return
+        }
+    }
 }
 
 def setLevel(level) {
