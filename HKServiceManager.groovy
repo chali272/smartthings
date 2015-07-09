@@ -17,7 +17,7 @@ definition(
     name: "HK Service Manager",
     namespace: "tylerfreckmann",
     author: "Tyler Freckmann",
-    description: "Allows you to control your Sonos from the SmartThings app. Perform basic functions like play, pause, stop, change track, and check artist and song name from the Things screen.",
+    description: "Allows you to control your Omni from the SmartThings app. Perform basic functions like play, pause, stop, change track, and check artist and song name from the Things screen.",
     category: "My Apps",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
     iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png",
@@ -42,7 +42,8 @@ def selectDevices() {
     atomicState.deviceList = dl
     def devices = [:]
     
-    dl.each {
+    dl.values().each {
+        log.debug "dl.value: $it"
         def roomName = it["GroupName"] == "harman" ? "" : "@"+it["GroupName"]
         devices.put(it["DeviceID"], it["DeviceName"] + roomName)
     }
