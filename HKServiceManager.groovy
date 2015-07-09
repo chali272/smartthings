@@ -35,15 +35,9 @@ def selectDevices() {
     atomicState.sessionID = atomicState.sessionID ?: initSession()["SessionID"]
     
     // get device list
-    def dl = [:]
-    deviceList(atomicState.sessionID)["DeviceList"].each {
-        dl.put(it["DeviceID"], it)
-    }
-    atomicState.deviceList = dl
     def devices = [:]
     
-    dl.values().each {
-        log.debug "dl.value: $it"
+    deviceList(atomicState.sessionID)["DeviceList"].each {
         def roomName = it["GroupName"] == "harman" ? "" : "@"+it["GroupName"]
         devices.put(it["DeviceID"], it["DeviceName"] + roomName)
     }
@@ -95,8 +89,8 @@ def initialize() {
     // Remove devices from the HKWHub Playback Session that are not in the user's settings
     // Get all the devices in the network
     def deviceIDs = []
-    atomicState.deviceList.each {
-        deviceIDs << it.key
+    deviceList(atomicState.sessionID)["DeviceList"].each {
+        deviceIDs << it["DeviceID"]
     }
     
     // Remove devices that are not in the user's settings
@@ -109,14 +103,11 @@ def initialize() {
     // Update device settings
     settings.speakers.each { deviceID ->
         def childDevice = getChildDevice(deviceID)
-        def deviceInfoMap = atomicState.deviceList[deviceID]
+        def deviceInfoMap = deviceInfo(atomicState.sessionID, deviceID)
         atomicState.currentSong = atomicState.currentSong ?: ["Title":"", "ID":""]
         deviceInfoMap.put("CurrentSong", atomicState.currentSong["Title"])
         childDevice.parseEventData(deviceInfoMap)
     }
-
-    // Set state variables
-    atomicState.playbackStatus = playbackStatus(atomicState.sessionID)
 }
 
 def removeChildDevices(delete) {
@@ -138,14 +129,14 @@ def play(childScript) {
     log.debug "Executing 'play'"
     
     // Check to see if the given child is active
-    def devInfo = atomicState.deviceList[childScript.device.deviceNetworkId]
+    def devInfo = deviceInfo(atomicState.sessionID, childScript.device.deviceNetworkId)
     def active = devInfo["Active"]
     def playing = devInfo["IsPlaying"]
     
     if (active) {
         if (!playing) {
             // Check to see if playback session is paused
-            def paused = atomicState.playbackStatus == "PlayerStatePaused"
+            def paused = playbackStatus(atomicState.sessionID)["PlaybackState"] == "PlayerStatePaused"
 
             if (paused) {
                 resumeHubMedia(atomicState.sessionID, atomicState.currentSong["ID"])
