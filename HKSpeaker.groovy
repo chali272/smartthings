@@ -41,16 +41,14 @@ metadata {
         standardTile("nextTrack", "device.status", decoration: "flat") {
         	state "next", label:'', action:"music Player.nextTrack", icon:"st.sonos.next-btn", backgroundColor: "#ffffff"
         }
-        controlTile("levelSliderControl", "device.level", "slider", height:1, width:2) {
+        controlTile("levelSliderControl", "device.level", "slider", height:1, width:2, range:"(0..50)") {
         	state "level", action:"music Player.setLevel", backgroundColor:"#ffffff"
         }
         valueTile("level", "device.level", decoration:"flat") {
-        	log.debug "device.level: ${currentValue}"
-			state "level", label:"${currentValue}", backgroundColor:"#ffffff"
+            state "level", label:'${currentValue}', backgroundColor:"#ffffff"
         }
         valueTile("currentSong", "device.trackDescription", height:1, width:3, decoration:"flat") {
-        	log.debug "device.level: ${currentValue}"
-            state "currentSong", label:"${currentValue}", backgroundColor:"#ffffff"
+            state "currentSong", label:'${currentValue}', backgroundColor:"#ffffff"
         }
         standardTile("mute", "device.mute", decoration:"flat") {
         	state "unmuted", label:'', action:"music Player.mute", icon:"st.custom.sonos.unmuted", backgroundColor:"#ffffff"
@@ -134,12 +132,12 @@ def unmute() {
 
 def setTrack(track) {
 	log.debug "Executing 'setTrack'"
-	parent.setTrack(this, track)
+	// TODO: handle 'setTrack' command
 }
 
-def resumeTrack(track) {
+def resumeTrack() {
 	log.debug "Executing 'resumeTrack'"
-	// TODO: handle 'resumeTrack' command
+	parent.resumeTrack(this)
 }
 
 def restoreTrack(track) {

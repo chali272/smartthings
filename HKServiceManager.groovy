@@ -69,6 +69,7 @@ def uninstalled() {
 
 def initialize() {
     log.trace "initialize()"
+    
     // Create child devices
     settings.speakers.each { deviceID ->
         def existingDevice = getChildDevice(deviceID)
@@ -164,17 +165,14 @@ def play(childScript) {
 def playFromChild(childScript) {
     log.trace "playFromChild(${childScript})"
     // Get the first song in the playlist
-    def firstSong = mediaList(atomicState.sessionID)["MediaList"][0]
+    def playlist = mediaList(atomicState.sessionID)["MediaList"]
+    if (playlist.size() == 0) {
+        return
+    }
+    def firstSong = playlist[0]
     firstSong = ["Title":firstSong["Title"], "ID":firstSong["PersistentID"]]
     
-    // Deactivate all children
-    def children = getChildDevices()
-    children.each {
-        removeDeviceFromSession(atomicState.sessionID, it.deviceNetworkId)
-    }
-    
-    // Activate given child
-    addDeviceToSession(atomicState.sessionID, childScript.device.deviceNetworkId) 
+    activateOneChild(childScript.device)
     
     // Play first song in media list
     playHubMedia(atomicState.sessionID, firstSong["ID"])
@@ -205,63 +203,127 @@ def nextTrack(childScript) {
     // Get media list
     def playlist = mediaList(atomicState.sessionID)["MediaList"]
     for ( int i = 0; i < playlist.size(); i++ ) {
-    	if (playlist[i]["PersistentID"] == atomicState.currentSong["ID"]) {
+        if (playlist[i]["PersistentID"] == atomicState.currentSong["ID"]) {
+            i = i==playlist.size()-1 ? -1 : i
             atomicState.currentSong = ["Title":playlist[i+1]["Title"], "ID":playlist[i+1]["PersistentID"]]
             playHubMedia(atomicState.sessionID, atomicState.currentSong["ID"])
-            def event = ["trackDescription":atomicState.currentSong["Title"]]
+            def event = ["status":"playing", "trackDescription":atomicState.currentSong["Title"]]
             childScript.generateEvent(event)
             return
         }
     }
 }
 
-def playTrack(track) {
+def playTrack(childScript, track) {
     log.debug "Executing 'playTrack'"
+    
+    activateOneChild(childScript.device)
+
+    // Find song in media list
     def playlist = mediaList(atomicState.sessionID)["MediaList"]
     for ( int i = 0; i < playlist.size(); i++ ) {
         if (playlist[i]["Title"] == track) {
-            atomicState.currentSong = ["Title":playlist[i+1]["Title"], "ID":playlist[i+1]["PersistentID"]]
+            atomicState.currentSong = ["Title":playlist[i]["Title"], "ID":playlist[i]["PersistentID"]]
             playHubMedia(atomicState.sessionID, atomicState.currentSong["ID"])
-            def event = ["trackDescription":atomicState.currentSong["Title"]]
+            def event = ["status":"playing", "trackDescription":atomicState.currentSong["Title"]]
             childScript.generateEvent(event)
             return
         }
     }
 }
 
-def setLevel(level) {
-    log.debug "Executing 'setLevel'"
-    parent.setLevel(this, level)
+def activateOneChild(child) {
+    // Deactivate all children
+    def children = getChildDevices()
+    children.each {
+        removeDeviceFromSession(atomicState.sessionID, it.deviceNetworkId)
+    }
+    
+    // Activate given child
+    addDeviceToSession(atomicState.sessionID, child.deviceNetworkId)
 }
 
-def playText(text) {
+def setLevel(childScript, level) {
+    log.debug "Executing 'setLevel'"
+    setVolumeDevice(atomicState.sessionID, childScript.device.deviceNetworkId, level)
+    def event = ["level":level, "mute":(level==0 ? "muted" : "unmuted")]
+    childScript.generateEvent(event)
+    if (level==0) {
+        atomicState.prevLevel = 20
+    }
+}
+
+def playText(childScript, text) {
     log.debug "Executing 'playText'"
     // TODO: handle 'playText' command
 }
 
-def mute() {
+def mute(childScript) {
     log.debug "Executing 'mute'"
-    parent.mute(this)
+    atomicState.prevLevel = getVolumeDevice(atomicState.sessionID, childScript.device.deviceNetworkId)["Volume"]
+    setVolumeDevice(atomicState.sessionID, childScript.device.deviceNetworkId, 0)
+    def event = ["level":0, "mute":"muted"]
+    childScript.generateEvent(event)
 }
 
-def previousTrack() {
+def previousTrack(childScript) {
     log.debug "Executing 'previousTrack'"
-    parent.previousTrack(this)
+    // Check time elapsed
+    def timeElapsed = playbackStatus(atomicState.sessionID)["TimeElapsed"].toInteger()
+    if (timeElapsed > 6) {
+        playHubMedia(atomicState.sessionID, atomicState.currentSong["ID"])
+        def event = ["status":"playing"]
+        childScript.generateEvent(event)
+        return
+    }
+    log.debug "time elapsed: $timeElapsed"
+    // Get media list
+    def playlist = mediaList(atomicState.sessionID)["MediaList"]
+    for ( int i = 0; i < playlist.size(); i++ ) {
+        if (playlist[i]["PersistentID"] == atomicState.currentSong["ID"]) {
+            // Wrap around if out of bounds
+            i = i==0 ? playlist.size() : i
+            atomicState.currentSong = ["Title":playlist[i-1]["Title"], "ID":playlist[i-1]["PersistentID"]]
+            playHubMedia(atomicState.sessionID, atomicState.currentSong["ID"])
+            def event = ["status":"playing", "trackDescription":atomicState.currentSong["Title"]]
+            childScript.generateEvent(event)
+            return
+        }
+    }
 }
 
-def unmute() {
+def unmute(childScript) {
     log.debug "Executing 'unmute'"
-    parent.unmute(this)
+    setVolumeDevice(atomicState.sessionID, childScript.device.deviceNetworkId, atomicState.prevLevel ?: 20)
+    def event = ["level":atomicState.prevLevel ?: 20, "mute":"unmuted"]
+    childScript.generateEvent(event)
 }
 
 def setTrack(track) {
     log.debug "Executing 'setTrack'"
-    parent.setTrack(this, track)
+    // TODO: handle 'setTrack' command
 }
 
-def resumeTrack(trackID) {
+def resumeTrack(childScript) {
     log.debug "Executing 'resumeTrack'"
-    // TODO: handle 'resumeTrack' command
+    // Check to see if the given child is active
+    def devInfo = deviceInfo(atomicState.sessionID, childScript.device.deviceNetworkId)
+    def active = devInfo["Active"]
+    def playing = devInfo["IsPlaying"]
+    
+    if (active) {
+        if (!playing) {
+            // Check to see if playback session is paused
+            def paused = playbackStatus(atomicState.sessionID)["PlaybackState"] == "PlayerStatePaused"
+
+            if (paused) {
+                resumeHubMedia(atomicState.sessionID, atomicState.currentSong["ID"])
+                // Generate child event to update playing status
+                def event = ["status":"playing"]
+                childScript.generateEvent(event)
+            }
+        }
+    }
 }
 
 def restoreTrack(track) {
