@@ -24,9 +24,9 @@ Register for a free SmartThings developer account
 Incorporate the HKWirelessHD speaker Device Handler and Service Manager into your account
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Create a Device Handler called ``HKSpeaker`` and paste the contents of `HKSpeaker.groovy <../../../HKSpeaker.groovy>`__ into it.
+- Create a Device Handler called ``HKSpeaker`` and paste the contents of `HKSpeaker.groovy <https://github.com/tylerfreckmann/smartthings/blob/master/HKSpeaker.groovy>`__ into it.
 	- Publish this Device Handler for yourself in "My Apps"
-- Create a SmartApp called ``HKServiceManager`` and paste the contents of `HKServiceManager.groovy <../../../HKServiceManager.groovy>`__ into it.
+- Create a SmartApp called ``HKServiceManager`` and paste the contents of `HKServiceManager.groovy <https://github.com/tylerfreckmann/smartthings/blob/master/HKServiceManager.groovy>`__ into it.
 	- Configure the Service Manager's ipAddress setting to be your router's public IP address (which you can find by googling "my ip address" from the device running the HKWHub app).
 	- Publish this Service Manager for yourself in "My Apps"
 
