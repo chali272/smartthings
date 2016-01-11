@@ -3,6 +3,8 @@ Harman Developer SmartThings Integration
 
 .. note::
 
+	Github: `github.com/tylerfreckmann/smartthings <https://github.com/tylerfreckmann/smartthings>`__
+
 	This documentation is about integrating Harman Kardon WirelessHD SDK into the SmartThings platform. You can download the SDK at the `Harman Developer web site <http://developer.harman.com>`__. Please visit `SmartThings <http://www.smartthings.com/developers/>`__ to read about their platform.
 
 	This documentation is a work in progress.
